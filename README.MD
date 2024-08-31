@@ -51,7 +51,7 @@ volumes:
 ### noeviction
 
 To test the `noeviction` strategy, I generated a large number of keys and values in the Redis database.
-I used a Python script ([CacheFillerNoeviction.py](CacheFillerNoeviction.py)) to generate the keys and values.
+I used a Python script ([CacheFillerNoEviction.py](CacheFillerNoEviction.py)) to generate the keys and values.
 After inserting `67355` key when maxmemory is `1MB`, the Redis server stopped accepting new keys and values and I received the following error message:
 
 ```shell
@@ -66,7 +66,7 @@ redis.exceptions.OutOfMemoryError: command not allowed when used memory > 'maxme
 ### allkeys-lru
 
 To test the `allkeys-lru` strategy, I generated a large number of keys and values in the Redis database.
-I used a Python script ([CacheFillerAllkeysLruEviction.py](CacheFillerAllkeysLruEviction.py)) to generate the keys and values.
+I used a Python script ([CacheFillerAllkeysLRUEviction.py](CacheFillerAllkeysLRUEviction.py)) to generate the keys and values.
 And `maxmemory 3mb`
 
 ![1.png](images/1.png)
@@ -84,6 +84,43 @@ and list resent key still in the cache.
 localhost:6379> EXISTS key:999999
 (integer) 1
 ```
+
+### allkeys-lfu
+
+To test the `allkeys-lfu` strategy,
+I generated a number of keys and values in the Redis database and then did access to a random key.
+I used a Python script ([CacheFillerAllkeysLFUEviction.py](CacheFillerAllkeysLFUEviction.py)) to generate the keys and values.
+And `maxmemory 4mb`
+
+![3.png](images/3.png)
+
+### volatile-lru
+
+To test the `volatile-lru` strategy,
+I generated a number of `5000` key-value pair with `80` seconds ttl
+and then again generated `5000` key-value pair but without ttl
+I used a Python script ([CacheFillerVolatileLRUEviction.py](CacheFillerVolatileLRUEviction.py)) to generate the keys and values.
+And `maxmemory 4mb`
+
+#### This is a data in database right after insert `10000` records
+
+![4.png](images/4.png)
+
+![5.png](images/5.png)
+
+### And this is after `80` seconds
+
+![6.png](images/6.png)
+
+![7.png](images/7.png)
+
+### volatile-lfu
+
+To test the `volatile-lfu` strategy,
+I generated a number of `5000` key-value pair with `80` seconds ttl
+and then again generated `5000` key-value pair but without ttl and then did random access to random key
+I used a Python script ([CacheFillerVolatileLFUEviction.py](CacheFillerVolatileLFUEviction.py)) to generate the keys and values.
+And `maxmemory 4mb`
 
 
 
