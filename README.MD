@@ -46,6 +46,12 @@ volumes:
   redis-slave-2-data:
 ```
 
+### Enter redis container
+
+```bash
+docker exec -it redis-master redis-cli -a yourmasterpassword
+```
+
 ## Try all eviction strategies.
 
 ### noeviction
@@ -122,6 +128,47 @@ and then again generated `5000` key-value pair but without ttl and then did rand
 I used a Python script ([CacheFillerVolatileLFUEviction.py](CacheFillerVolatileLFUEviction.py)) to generate the keys and values.
 And `maxmemory 4mb`
 
+### allkeys-random
+
+To test the `allkeys-random` strategy,
+I generated 100000 records with [CacheFillerAllKeysRandom.py](CacheFillerAllKeysRandom.py)
+and after insertion the number of records started to delete when insertion happens.
+And also it clear by id that some random records were removed.
+
+![8.png](images/8.png)
+
+### volatile-random
+
+To test the `volatile-random` strategy, I inserted `12000` records with ttl `80` seconds and `24000` with no expiration
+
+### After insertion 
+
+![9.png](images/9.png)
+
+### After 80 seconds started to delete random records with no expiration
+
+![10.png](images/10.png)
+
+### The volatile-ttl
+
+> The volatile-ttl policy evicts keys with expiration times based on their time-to-live (TTL) values, specifically evicting the keys with the shortest TTL first when the maxmemory limit is reached.### volatile-ttl
 
 
+To test the `volatile-ttl` strategy,
+I generated 5000 records with [CacheFillerVolatileTTL.py](CacheFillerVolatileTTL.py)
+and after insertion the number of records started to delete when insertion happens.
+
+### Keys with smaller ttl were deleted first
+
+![11.png](images/11.png)
+
+![12.png](images/12.png)
+
+![13.png](images/13.png)
+
+### Keys with higher ttl were in cache
+
+![14.png](images/14.png)
+
+## Write a wrapper for Redis Client that implement probabilistic cache.
 
