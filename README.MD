@@ -69,6 +69,8 @@ After inserting `67355` key when maxmemory is `1MB`, the Redis server stopped ac
 redis.exceptions.OutOfMemoryError: command not allowed when used memory > 'maxmemory'.
 ```
 
+---
+
 ### allkeys-lru
 
 To test the `allkeys-lru` strategy, I generated a large number of keys and values in the Redis database.
@@ -91,6 +93,8 @@ localhost:6379> EXISTS key:999999
 (integer) 1
 ```
 
+---
+
 ### allkeys-lfu
 
 To test the `allkeys-lfu` strategy,
@@ -99,6 +103,8 @@ I used a Python script ([CacheFillerAllkeysLFUEviction.py](CacheFillerAllkeysLFU
 And `maxmemory 4mb`
 
 ![3.png](images/3.png)
+
+---
 
 ### volatile-lru
 
@@ -120,6 +126,8 @@ And `maxmemory 4mb`
 
 ![7.png](images/7.png)
 
+---
+
 ### volatile-lfu
 
 To test the `volatile-lfu` strategy,
@@ -127,6 +135,8 @@ I generated a number of `5000` key-value pair with `80` seconds ttl
 and then again generated `5000` key-value pair but without ttl and then did random access to random key
 I used a Python script ([CacheFillerVolatileLFUEviction.py](CacheFillerVolatileLFUEviction.py)) to generate the keys and values.
 And `maxmemory 4mb`
+
+---
 
 ### allkeys-random
 
@@ -136,6 +146,8 @@ and after insertion the number of records started to delete when insertion happe
 And also it clear by id that some random records were removed.
 
 ![8.png](images/8.png)
+
+---
 
 ### volatile-random
 
@@ -149,10 +161,11 @@ To test the `volatile-random` strategy, I inserted `12000` records with ttl `80`
 
 ![10.png](images/10.png)
 
+---
+
 ### The volatile-ttl
 
 > The volatile-ttl policy evicts keys with expiration times based on their time-to-live (TTL) values, specifically evicting the keys with the shortest TTL first when the maxmemory limit is reached.### volatile-ttl
-
 
 To test the `volatile-ttl` strategy,
 I generated 5000 records with [CacheFillerVolatileTTL.py](CacheFillerVolatileTTL.py)
@@ -170,5 +183,60 @@ and after insertion the number of records started to delete when insertion happe
 
 ![14.png](images/14.png)
 
+---
+
 ## Write a wrapper for Redis Client that implement probabilistic cache.
 
+### Probabilistic early expiration cache implementation in Java [ProbabilisticEarlyExpirationCache.java](src/main/java/demo/redisdemo/ProbabilisticEarlyExpirationCache.java)
+
+```java
+public String fetch(String key, int ttl, CacheLoader loader) {
+    var entry = cacheRead(key);
+    var currentTime = System.currentTimeMillis();
+
+    if (entry == null || shouldRecompute(entry, currentTime)) {
+        var startTime = System.currentTimeMillis();
+        var value = loader.load();
+        var delta = System.currentTimeMillis() - startTime;
+
+        cacheWrite(key, value, delta, ttl);
+        return value;
+    }
+
+    return entry.getValue();
+}
+
+private boolean shouldRecompute(CacheEntry entry, long currentTime) {
+    var randomValue = random.nextDouble();
+    var threshold = entry.getDelta() * beta * Math.log(randomValue);
+    return (currentTime - threshold) >= entry.getExpiry();
+}
+```
+
+### Using probabilistic early expiration cache [Main.java](src/main/java/demo/redisdemo/Main.java)
+
+```java
+public static void main(String[] args) throws InterruptedException {
+    var cache = new ProbabilisticEarlyExpirationCache("localhost", 6379, 1.0);
+
+    cache.put("key1", "value1", 10);
+
+    var value = cache.fetch("key1", 10, () -> {
+        return "value2";
+    });
+    System.out.println("Value for key1: " + value); // Should print "value1"
+
+
+    Thread.sleep(10000);
+    value = cache.fetch("key1", 10, () -> {
+        return "value2";
+    });
+    System.out.println("Value for key1: " + value); // Should print "value2"
+
+    cache.close();
+}
+```
+
+### Results
+
+![15.png](images/15.png)
